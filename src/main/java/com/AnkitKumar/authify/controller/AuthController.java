@@ -3,6 +3,7 @@ package com.AnkitKumar.authify.controller;
 import com.AnkitKumar.authify.Io.AuthRequest;
 import com.AnkitKumar.authify.Io.AuthResponse;
 import com.AnkitKumar.authify.services.AppUserDetailsService;
+import com.AnkitKumar.authify.services.ProfileService;
 import com.AnkitKumar.authify.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
@@ -13,10 +14,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.annotation.CurrentSecurityContext;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Duration;
 import java.util.HashMap;
@@ -29,6 +28,8 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final AppUserDetailsService appUserDetailsService;
     private final JwtUtil jwtUtil;
+
+    private final ProfileService profileService;
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody AuthRequest request){
@@ -74,5 +75,14 @@ public class AuthController {
     public  ResponseEntity<Boolean>  isAuthenticated(@CurrentSecurityContext(expression = "authentication?.name")String email){
         return ResponseEntity.ok(email != null);
 
+    }
+
+    @PostMapping("/send-reset-otp")
+    public  void  sendResetOtp(@RequestParam String email){
+        try {
+            profileService.sendResetOtp(email);
+        }catch (Exception e){
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,e.getMessage());
+        }
     }
 }

@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 @RequiredArgsConstructor
@@ -19,6 +20,7 @@ public class ProfileServiceImp implements   ProfileService{
 
     private  final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EmailService emailService;
 
 
     @Override
@@ -70,5 +72,31 @@ public class ProfileServiceImp implements   ProfileService{
                 .verifyOtpExpireAt(0L)
                 .resetOtp(null)
                 .build();
+    }
+
+
+    @Override
+    public void sendResetOtp(String email) {
+        UserEntity existsEntity = userRepository.findByEmail(email)
+                .orElseThrow(()->new UsernameNotFoundException("User not found : " + email));
+
+//        Generate 6 digit otp
+        String otp = String.valueOf(ThreadLocalRandom.current().nextInt(100000,1000000));
+
+//        calculate expire  (current time + 15 minutes  in milliseconds )
+        long  expiryTime = System.currentTimeMillis() + (15*60*1000);
+
+//        update the profile / user
+        existsEntity.setResetOtp(otp);
+        existsEntity.setResetOtpExpireAt(expiryTime);
+        userRepository.save(existsEntity);
+
+        try{
+//            send the reset otp email
+            emailService.sendResetOtpEmail(existsEntity.getEmail(),otp);
+
+        }catch (Exception ex){
+            throw new RuntimeException("Unable to send email ");
+        }
     }
 }
