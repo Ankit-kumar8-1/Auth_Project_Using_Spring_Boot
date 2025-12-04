@@ -2,10 +2,13 @@ package com.AnkitKumar.authify.controller;
 
 import com.AnkitKumar.authify.Io.AuthRequest;
 import com.AnkitKumar.authify.Io.AuthResponse;
+import com.AnkitKumar.authify.Io.ResetPasswordRequest;
 import com.AnkitKumar.authify.services.AppUserDetailsService;
 import com.AnkitKumar.authify.services.ProfileService;
 import com.AnkitKumar.authify.util.JwtUtil;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.Value;
 import org.springframework.http.*;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -81,6 +84,15 @@ public class AuthController {
     public  void  sendResetOtp(@RequestParam String email){
         try {
             profileService.sendResetOtp(email);
+        }catch (Exception e){
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,e.getMessage());
+        }
+    }
+
+    @PostMapping("/reset-password")
+    public  void resetPassword(@Valid @RequestBody ResetPasswordRequest request){
+        try{
+            profileService.resetPasword(request.getEmail(),request.getOtp(),request.getNewPassword());
         }catch (Exception e){
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,e.getMessage());
         }
