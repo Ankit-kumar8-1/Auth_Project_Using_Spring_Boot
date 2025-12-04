@@ -14,4 +14,9 @@ public interface ProfileService {
     void sendResetOtp(String email);
 
     void resetPasword(String email, String otp , String newPassword);
+
+    void sendOtp(String email);
+
+    void verifyOtp(String email , String otp);
+
 }
