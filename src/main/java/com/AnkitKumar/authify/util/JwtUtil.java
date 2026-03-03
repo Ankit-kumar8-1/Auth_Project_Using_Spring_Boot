@@ -19,51 +19,48 @@ public class JwtUtil {
     @Value("${jwt.secret.key}")
     private String SECRET_KEY;
 
-    // 1 hour expiry (clean value)
-    private final long EXPIRATION = 1000 * 60 * 60;
+    private final long EXPIRATION = 1000 * 60 * 60; // 1 hour
 
-    public String generateToken(UserDetails userDetails){
-        Map<String,Object> claims = new HashMap<>();
-        return createToken(claims, userDetails.getUsername());
-    }
+    // Generate token with role
+    public String generateToken(UserDetails userDetails, String role) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("role", role);
 
-    private String createToken(Map<String, Object> claims, String email) {
         return Jwts.builder()
                 .setClaims(claims)
-                .setSubject(email)
-                .setIssuedAt(new Date(System.currentTimeMillis()))
+                .setSubject(userDetails.getUsername())
+                .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION))
                 .signWith(SignatureAlgorithm.HS256, SECRET_KEY)
                 .compact();
     }
 
-    private Claims extractAllClaims(String token){
+    private Claims extractAllClaims(String token) {
         return Jwts.parser()
                 .setSigningKey(SECRET_KEY)
-                .setAllowedClockSkewSeconds(60)  // FIX: allow 60 seconds time drift
+                .setAllowedClockSkewSeconds(60)
                 .parseClaimsJws(token)
                 .getBody();
     }
 
-    public <T> T extractClaim(String token, Function<Claims,T> claimsResolver){
-        final Claims claims = extractAllClaims(token);
-        return claimsResolver.apply(claims);
+    public String extractEmail(String token) {
+        return extractAllClaims(token).getSubject();
     }
 
-    public String extractEmail(String token){
-        return extractClaim(token, Claims::getSubject);
+    public String extractRole(String token) {
+        return extractAllClaims(token).get("role", String.class);
     }
 
-    public Date extractExpiration(String token){
-        return extractClaim(token, Claims::getExpiration);
+    public Date extractExpiration(String token) {
+        return extractAllClaims(token).getExpiration();
     }
 
-    private Boolean isTokenExpired(String token){
+    private boolean isTokenExpired(String token) {
         return extractExpiration(token).before(new Date());
     }
 
-    public Boolean validateToken(String token , UserDetails userDetails){
+    public boolean validateToken(String token, UserDetails userDetails) {
         final String email = extractEmail(token);
-        return (email.equals(userDetails.getUsername()) && !isTokenExpired(token));
+        return email.equals(userDetails.getUsername()) && !isTokenExpired(token);
     }
 }

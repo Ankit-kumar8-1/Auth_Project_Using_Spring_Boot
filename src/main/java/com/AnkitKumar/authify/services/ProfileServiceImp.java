@@ -1,13 +1,21 @@
 package com.AnkitKumar.authify.services;
 
+import com.AnkitKumar.authify.Io.LoginRequest;
+import com.AnkitKumar.authify.Io.LoginResponse;
 import com.AnkitKumar.authify.Io.ProfileRequest;
 import com.AnkitKumar.authify.Io.ProfileResponse;
 import com.AnkitKumar.authify.Repositories.UserRepository;
+import com.AnkitKumar.authify.domain.Role;
 import com.AnkitKumar.authify.entities.UserEntity;
-import com.AnkitKumar.authify.exceptions.EmailAlreadyExistsException;
-import com.AnkitKumar.authify.exceptions.InValidToken;
-import com.AnkitKumar.authify.exceptions.TokenExpireException;
+import com.AnkitKumar.authify.exceptions.*;
+import com.AnkitKumar.authify.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -23,6 +31,9 @@ public class ProfileServiceImp implements   ProfileService{
     private  final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
+    private final AuthenticationManager authenticationManager;
+    private final AppUserDetailsService appUserDetailsService;
+    private final JwtUtil jwtUtil;
 
 
     @Override
@@ -33,6 +44,8 @@ public class ProfileServiceImp implements   ProfileService{
         }
         UserEntity newProfile = convertToEntity(request);
         newProfile.setPassword(passwordEncoder.encode(request.getPassword()));
+        newProfile.setUserId(UUID.randomUUID().toString());
+        newProfile.setRole(Role.USER);
 
         String token = UUID.randomUUID().toString();
         newProfile.setEmailVerificationToken(token);
@@ -45,6 +58,48 @@ public class ProfileServiceImp implements   ProfileService{
     }
 
     @Override
+    public LoginResponse login(LoginRequest request) {
+
+        Authentication authentication;
+        try {
+            authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            request.getEmail(),
+                            request.getPassword()
+                    )
+            );
+        } catch (BadCredentialsException ex) {
+            throw new InvalidCredentialsException("Invalid email or password");
+        }
+
+        UserEntity user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() ->
+                        new UsernameNotFoundException("User not found with email: " + request.getEmail())
+                );
+
+
+        if (!user.getIsAccountVerified()) {
+            throw new EmailNotVerifiedException("Please verify your email first");
+        }
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+
+        UserDetails userDetails =
+                appUserDetailsService.loadUserByUsername(user.getEmail());
+
+        String token = jwtUtil.generateToken(userDetails, user.getRole().name());
+
+        return new LoginResponse(
+                true,
+                "Login successful",
+                user.getEmail(),
+                user.getName(),
+                user.getRole().name(),
+                token
+        );
+    }
+
+    @Override
     public ProfileResponse getProfile(String email) {
         UserEntity existingUser = userRepository.findByEmail(email)
                 .orElseThrow(()-> new UsernameNotFoundException("User not found : " + email ));
@@ -52,24 +107,6 @@ public class ProfileServiceImp implements   ProfileService{
         return convertToProfileResponse(existingUser);
     }
 
-
-    private  ProfileResponse convertToProfileResponse(UserEntity newProfile){
-        return  ProfileResponse.builder()
-                .name(newProfile.getName())
-                .email(newProfile.getEmail())
-                .userId(newProfile.getUserId())
-                .isAccountVerified(newProfile.getIsAccountVerified())
-                .build();
-    }
-
-
-
-    private UserEntity convertToEntity(ProfileRequest request){
-        return  UserEntity.builder()
-                .email(request.getEmail())
-                .name(request.getName())
-                .build();
-    }
 
 
     @Override
@@ -170,20 +207,35 @@ public class ProfileServiceImp implements   ProfileService{
 
     @Override
     public void verifyUser(String token) {
-        UserEntity user = userRepository.findByEmailVerificationToken(token)
-                .orElseThrow(() -> new InValidToken("Invalid Token "));
 
+        UserEntity user = userRepository.findByEmailVerificationToken(token)
+                .orElseThrow(() -> new InValidToken("Invalid Request"));
 
         if (user.getEmailVerificationTokenExpiry().isBefore(LocalDateTime.now())){
             throw new TokenExpireException("Token Expire");
         }
-
 
         user.setIsAccountVerified(true);
         user.setEmailVerificationTokenExpiry(null);
         user.setEmailVerificationToken(null);
 
         userRepository.save(user);
+    }
+
+    private  ProfileResponse convertToProfileResponse(UserEntity newProfile){
+        return  ProfileResponse.builder()
+                .name(newProfile.getName())
+                .email(newProfile.getEmail())
+                .userId(newProfile.getUserId())
+                .isAccountVerified(newProfile.getIsAccountVerified())
+                .build();
+    }
+
+    private UserEntity convertToEntity(ProfileRequest request){
+        return  UserEntity.builder()
+                .email(request.getEmail())
+                .name(request.getName())
+                .build();
     }
 
 }

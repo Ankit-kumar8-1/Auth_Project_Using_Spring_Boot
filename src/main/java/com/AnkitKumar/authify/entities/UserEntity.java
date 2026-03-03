@@ -1,5 +1,6 @@
 package com.AnkitKumar.authify.entities;
 
+import com.AnkitKumar.authify.domain.Role;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
@@ -25,7 +26,7 @@ public class UserEntity {
     private Long id;
     @Column(unique = true)
     private String userId;
-    private String name ;
+    private String name;
     @NotBlank
     @Column(unique = true)
     private String email;
@@ -35,6 +36,8 @@ public class UserEntity {
 
     private String verifyOtp;
 
+    @Enumerated(EnumType.STRING)
+    private Role role = Role.USER;
 
     @Column(nullable = false)
     private Boolean isAccountVerified = false;

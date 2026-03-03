@@ -5,8 +5,12 @@ import lombok.Getter;
 
 @Getter
 @AllArgsConstructor
-public class AuthResponse {
+public class LoginResponse {
 
+    private boolean success;
+    private String message;
     private String email;
+    private String fullName;
+    private String role;
     private String token;
 }
