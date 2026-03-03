@@ -24,4 +24,6 @@ public interface ProfileService {
     void verifyOtp(String email , String otp);
 
     void verifyUser(String token);
+
+    Boolean isAuthenticated();
 }

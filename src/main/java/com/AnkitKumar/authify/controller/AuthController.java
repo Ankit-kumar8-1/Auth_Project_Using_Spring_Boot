@@ -1,5 +1,6 @@
 package com.AnkitKumar.authify.controller;
 
+import com.AnkitKumar.authify.Io.ApiResponse;
 import com.AnkitKumar.authify.Io.LoginRequest;
 import com.AnkitKumar.authify.Io.LoginResponse;
 import com.AnkitKumar.authify.Io.ResetPasswordRequest;
@@ -22,9 +23,6 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AuthController {
 
-    private final AuthenticationManager authenticationManager;
-    private final AppUserDetailsService appUserDetailsService;
-    private final JwtUtil jwtUtil;
 
     private final ProfileService profileService;
 
@@ -33,14 +31,15 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.OK).body(profileService.login(request));
     }
 
-    private void authenticate(String email, String password) {
-        authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(email,password));
-    }
 
     @GetMapping("/is-authenticated")
-    public  ResponseEntity<Boolean>  isAuthenticated(@CurrentSecurityContext(expression = "authentication?.name")String email){
-        return ResponseEntity.ok(email != null);
-
+    public  ResponseEntity<ApiResponse<String>>  isAuthenticated(){
+        Boolean result= profileService.isAuthenticated();
+        if (result){
+            return  ResponseEntity.status(HttpStatus.OK).body( new ApiResponse<>(true,"User is Authenticated",null));
+        }else {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ApiResponse<>(false,"User is NotAuthenticated",null));
+        }
     }
 
     @PostMapping("/send-reset-otp")

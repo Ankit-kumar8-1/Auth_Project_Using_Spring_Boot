@@ -222,6 +222,22 @@ public class ProfileServiceImp implements   ProfileService{
         userRepository.save(user);
     }
 
+
+    @Override
+    public Boolean isAuthenticated() {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()
+                || authentication.getPrincipal().equals("anonymousUser")) {
+            return false;
+        }
+        String email = authentication.getName();
+        UserEntity user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
+        return user.getIsAccountVerified();
+    }
+
+
     private  ProfileResponse convertToProfileResponse(UserEntity newProfile){
         return  ProfileResponse.builder()
                 .name(newProfile.getName())
