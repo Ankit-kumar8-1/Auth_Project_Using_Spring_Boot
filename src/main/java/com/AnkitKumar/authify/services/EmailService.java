@@ -17,12 +17,24 @@ public class EmailService {
     @Value("${spring.mail.properties.mail.smtp.from}")
     private String fromEmail;
 
-    public  void sendWelcomeEmail(String toEmail, String name ){
+    @Value("${server.servlet.context-path}")
+    private String baseUrl;
+
+    public  void sendWelcomeEmail(String toEmail, String name ,String token){
+
+
+        String verificationUrl =  "localhost:8080/api/v1.0/verify?token=" + token;
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(fromEmail);
         message.setTo(toEmail);
-        message.setSubject("Welcome to our PlatForm");
-        message.setText("Hello" + name +"\n\nThanks for registering with us!\n\nRegards\n Authify Team");
+        message.setSubject("Verify Your Email - Authify");
+        message.setText(
+                "Hello " + name +
+                        "\n\nPlease click the link below to verify your account:\n\n"
+                        + verificationUrl +
+                        "\n\nThis link will expire in 30 minutes."
+                        + "\n\nRegards,\nAuthify Team"
+        );
 
         mailSender.send(message);
     }

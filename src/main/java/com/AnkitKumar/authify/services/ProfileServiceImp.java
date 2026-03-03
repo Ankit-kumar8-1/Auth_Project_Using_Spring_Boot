@@ -4,13 +4,15 @@ import com.AnkitKumar.authify.Io.ProfileRequest;
 import com.AnkitKumar.authify.Io.ProfileResponse;
 import com.AnkitKumar.authify.Repositories.UserRepository;
 import com.AnkitKumar.authify.entities.UserEntity;
+import com.AnkitKumar.authify.exceptions.EmailAlreadyExistsException;
+import com.AnkitKumar.authify.exceptions.InValidToken;
+import com.AnkitKumar.authify.exceptions.TokenExpireException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -26,17 +28,19 @@ public class ProfileServiceImp implements   ProfileService{
     @Override
     public ProfileResponse createProfile(ProfileRequest request) {
 
-        // 1. Check if email exists
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "Email already exists!"
-            );
+            throw  new EmailAlreadyExistsException("Email Already exists!");
         }
-
-        // 2. Convert and save
         UserEntity newProfile = convertToEntity(request);
+        newProfile.setPassword(passwordEncoder.encode(request.getPassword()));
+
+        String token = UUID.randomUUID().toString();
+        newProfile.setEmailVerificationToken(token);
+        newProfile.setEmailVerificationTokenExpiry(LocalDateTime.now().plusMinutes(15));
+        newProfile.setIsAccountVerified(false);
+
         newProfile = userRepository.save(newProfile);
+        emailService.sendWelcomeEmail(newProfile.getEmail(),newProfile.getName(),newProfile.getEmailVerificationToken());
         return convertToProfileResponse(newProfile);
     }
 
@@ -63,14 +67,7 @@ public class ProfileServiceImp implements   ProfileService{
     private UserEntity convertToEntity(ProfileRequest request){
         return  UserEntity.builder()
                 .email(request.getEmail())
-                .userId(UUID.randomUUID().toString())
                 .name(request.getName())
-                .password(passwordEncoder.encode(request.getPassword()))
-                .isAccountVerified(false)
-                .resetOtpExpireAt(0L)
-                .verifyOtp(null)
-                .verifyOtpExpireAt(0L)
-                .resetOtp(null)
                 .build();
     }
 
@@ -101,7 +98,7 @@ public class ProfileServiceImp implements   ProfileService{
     }
 
     @Override
-    public void resetPasword(String email, String otp, String newPassword) {
+    public void resetPassword(String email, String otp, String newPassword) {
         UserEntity existingUser  = userRepository.findByEmail(email)
                 .orElseThrow(()-> new UsernameNotFoundException("User not found : "+ email));
 
@@ -171,6 +168,22 @@ public class ProfileServiceImp implements   ProfileService{
         userRepository.save(existingUser);
     }
 
+    @Override
+    public void verifyUser(String token) {
+        UserEntity user = userRepository.findByEmailVerificationToken(token)
+                .orElseThrow(() -> new InValidToken("Invalid Token "));
 
+
+        if (user.getEmailVerificationTokenExpiry().isBefore(LocalDateTime.now())){
+            throw new TokenExpireException("Token Expire");
+        }
+
+
+        user.setIsAccountVerified(true);
+        user.setEmailVerificationTokenExpiry(null);
+        user.setEmailVerificationToken(null);
+
+        userRepository.save(user);
+    }
 
 }

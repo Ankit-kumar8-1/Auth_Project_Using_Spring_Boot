@@ -1,12 +1,15 @@
 package com.AnkitKumar.authify.controller;
 
+import com.AnkitKumar.authify.Io.ApiResponse;
 import com.AnkitKumar.authify.Io.ProfileRequest;
 import com.AnkitKumar.authify.Io.ProfileResponse;
 import com.AnkitKumar.authify.services.EmailService;
 import com.AnkitKumar.authify.services.ProfileService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.graphql.GraphQlProperties;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.CurrentSecurityContext;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,10 +22,19 @@ public class ProfileController {
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
-    public ProfileResponse register(@Valid  @RequestBody ProfileRequest request){
+    public ResponseEntity<ApiResponse<ProfileResponse>> register(@Valid  @RequestBody ProfileRequest request){
         ProfileResponse response = profileService.createProfile(request);
-        emailService.sendWelcomeEmail(response.getEmail(),response.getName());
-        return response;
+        ApiResponse<ProfileResponse> apiResponse =
+                new ApiResponse<>(true, "Profile created successfully", response);
+        return ResponseEntity.status(HttpStatus.CREATED).body(apiResponse);
+
+    }
+
+    @GetMapping("/verify")
+    public ResponseEntity<ApiResponse<String>> verify(@RequestParam String token){
+        profileService.verifyUser(token);
+        ApiResponse<String> apiResponse = new ApiResponse<>(true,"Email Verified Successfully",null);
+        return ResponseEntity.status(HttpStatus.OK).body(apiResponse);
     }
 
     @GetMapping("/profile")

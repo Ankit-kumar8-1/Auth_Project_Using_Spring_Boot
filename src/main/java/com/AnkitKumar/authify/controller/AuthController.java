@@ -54,7 +54,7 @@ public class AuthController {
         }catch (BadCredentialsException ex){
             Map<String,Object> error = new HashMap<>();
             error.put("error", true);
-            error.put("message","Email pr password is incorrect");
+            error.put("message","Email or  password is incorrect");
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
         }catch (DisabledException ex){
             Map<String,Object> error = new HashMap<>();
@@ -92,7 +92,7 @@ public class AuthController {
     @PostMapping("/reset-password")
     public  void resetPassword(@Valid @RequestBody ResetPasswordRequest request){
         try{
-            profileService.resetPasword(request.getEmail(),request.getOtp(),request.getNewPassword());
+            profileService.resetPassword(request.getEmail(),request.getOtp(),request.getNewPassword());
         }catch (Exception e){
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,e.getMessage());
         }
