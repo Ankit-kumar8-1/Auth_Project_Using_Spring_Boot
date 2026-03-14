@@ -22,7 +22,6 @@ public class EmailService {
 
     public  void sendWelcomeEmail(String toEmail, String name ,String token){
 
-
         String verificationUrl =  "localhost:8080/api/v1.0/verify?token=" + token;
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(fromEmail);

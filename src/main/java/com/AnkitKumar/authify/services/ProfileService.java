@@ -15,15 +15,12 @@ public interface ProfileService {
 
      ProfileResponse getProfile(String email);
 
-    void sendResetOtp(String email);
+    void sendResetOtp();
 
-    void resetPassword(String email, String otp , String newPassword);
+    void resetPassword(String otp , String newPassword);
 
-    void sendOtp(String email);
-
-    void verifyOtp(String email , String otp);
-
-    void verifyUser(String token);
 
     Boolean isAuthenticated();
+
+    void verifyUser(String token);
 }

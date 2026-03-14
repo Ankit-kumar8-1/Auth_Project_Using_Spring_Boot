@@ -4,15 +4,11 @@ import com.AnkitKumar.authify.Io.ApiResponse;
 import com.AnkitKumar.authify.Io.LoginRequest;
 import com.AnkitKumar.authify.Io.LoginResponse;
 import com.AnkitKumar.authify.Io.ResetPasswordRequest;
-import com.AnkitKumar.authify.services.AppUserDetailsService;
 import com.AnkitKumar.authify.services.ProfileService;
-import com.AnkitKumar.authify.util.JwtUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.annotation.CurrentSecurityContext;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -43,9 +39,9 @@ public class AuthController {
     }
 
     @PostMapping("/send-reset-otp")
-    public  void  sendResetOtp(@RequestParam String email){
+    public  void  sendResetOtp(){
         try {
-            profileService.sendResetOtp(email);
+            profileService.sendResetOtp();
         }catch (Exception e){
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,e.getMessage());
         }
@@ -54,31 +50,12 @@ public class AuthController {
     @PostMapping("/reset-password")
     public  void resetPassword(@Valid @RequestBody ResetPasswordRequest request){
         try{
-            profileService.resetPassword(request.getEmail(),request.getOtp(),request.getNewPassword());
+            profileService.resetPassword(
+                    request.getOtp(),request.getNewPassword());
         }catch (Exception e){
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,e.getMessage());
         }
     }
 
-    @PostMapping("/send-otp")
-    public  void  sendVerifyOtp(@CurrentSecurityContext(expression = "authentication?.name") String email){
-        try {
-            profileService.sendOtp(email);
-        }catch (Exception e){
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,e.getMessage());
-        }
-    }
-    @PostMapping("/verify-otp")
-    public  void VerifyEmail(@RequestBody Map<String , Object> request , @CurrentSecurityContext(expression = "authentication?.name") String email){
 
-        if(request.get("otp").toString() ==null ){
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Missing Details");
-        }
-
-        try{
-            profileService.verifyOtp(email,request.get("otp").toString());
-        }catch (Exception e){
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,e.getMessage());
-        }
-    }
 }
